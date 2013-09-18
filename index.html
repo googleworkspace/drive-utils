@@ -58,7 +58,7 @@
          for (var i = 0, f; f = files[i]; i++) {
              var uploader = new MediaUploader({
                  file: f,
-                 accessToken: accessToken,
+                 token: accessToken,
                  onComplete: function(data) {
                      var element = document.createElement("pre");
                      element.appendChild(document.createTextNode(data));
