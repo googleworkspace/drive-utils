@@ -1,6 +1,6 @@
 # cors-upload-sample
 
-Sample code for uploading files directly with vanilla Javascript (XHR/CORS). Try the [live version](https://googledrive.github.io/cors-upload-sample)
+Sample code for uploading files directly with vanilla Javascript (XHR/CORS). Try the [live version](http://googledrive.github.io/cors-upload-sample)
 and drag & drop files to upload them to Google Drive.
 
 This sample has only been tested with Chrome. Other browsers may or may not work.
