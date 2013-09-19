@@ -16,7 +16,14 @@ var RetryHandler = function() {
  */
 RetryHandler.prototype.retry = function(fn) {
   setTimeout(fn, this.interval);
-  this.interval = this.nextInterval();
+  this.interval = this.nextInterval_();
+};
+
+/**
+ * Reset the counter (e.g. after successful request.)
+ */
+RetryHandler.prototype.reset = function() {
+  this.interval = 1000;
 };
 
 /**
@@ -25,8 +32,8 @@ RetryHandler.prototype.retry = function(fn) {
  *
  * @private
  */
-RetryHandler.prototype.nextInterval = function() {
-  var interval = this.interval * 2 + this.getRandomInt(0, 1000);
+RetryHandler.prototype.nextInterval_ = function() {
+  var interval = this.interval * 2 + this.getRandomInt_(0, 1000);
   return Math.min(interval, this.maxInterval);
 };
 
@@ -37,9 +44,10 @@ RetryHandler.prototype.nextInterval = function() {
  * @param {number} max Upper bounds
  * @private
  */
-RetryHandler.prototype.getRandomInt = function(min, max) {
+RetryHandler.prototype.getRandomInt_ = function(min, max) {
   return Math.floor(Math.random() * (max - min + 1) + min);
 };
+
 
 /**
  * Helper class for resumable uploads using XHR/CORS. Can upload any Blob-like item, whether
@@ -67,6 +75,7 @@ RetryHandler.prototype.getRandomInt = function(min, max) {
  * @param {function} [options.onError] Callback if upload fails
  */
 var MediaUploader = function(options) {
+  var noop = function() {};
   this.file = options.file;
   this.contentType = options.contentType || this.file.type || 'application/octet-stream';
   this.metadata = options.metadata || {
@@ -74,19 +83,17 @@ var MediaUploader = function(options) {
     'mimeType': this.contentType
   };
   this.token = options.token;
-  this.onComplete = options.onComplete;
-  this.onError = options.onError;
+  this.onComplete = options.onComplete || noop;
+  this.onError = options.onError || noop;
   this.offset = options.offset || 0;
   this.chunkSize = options.chunkSize || 0;
   this.retryHandler = new RetryHandler();
 
-  this.uploadType = 'resumable';
-
   this.url = options.url;
   if (!this.url) {
     var params = options.params || {};
-    params['uploadType'] = this.uploadType;
-    this.url = this.buildUrl(options.fileId, params);
+    params.uploadType = 'resumable';
+    this.url = this.buildUrl_(options.fileId, params);
   }
   this.httpMethod = this.fileId ? 'PUT' : 'POST';
 };
@@ -107,9 +114,9 @@ MediaUploader.prototype.upload = function() {
   xhr.onload = function(e) {
     var location = e.target.getResponseHeader('Location');
     this.url = location;
-    this.sendFile();
+    this.sendFile_();
   }.bind(this);
-  xhr.onerror = this.onUploadError.bind(this);
+  xhr.onerror = this.onUploadError_.bind(this);
   xhr.send(JSON.stringify(this.metadata));
 };
 
@@ -118,7 +125,7 @@ MediaUploader.prototype.upload = function() {
  *
  * @private
  */ 
-MediaUploader.prototype.sendFile = function() {
+MediaUploader.prototype.sendFile_ = function() {
   var content = this.file;
   var end = this.file.size;
   
@@ -135,8 +142,8 @@ MediaUploader.prototype.sendFile = function() {
   xhr.setRequestHeader('Content-Type', this.contentType);
   xhr.setRequestHeader('Content-Range', "bytes " + this.offset + "-" + (end - 1) + "/" + this.file.size);
   xhr.setRequestHeader('X-Upload-Content-Type', this.file.type);
-  xhr.onload = this.onResumableUploadSuccess.bind(this);
-  xhr.onerror = this.onResumableUploadError.bind(this);
+  xhr.onload = this.onContentUploadSuccess_.bind(this);
+  xhr.onerror = this.onContentUploadError_.bind(this);
   xhr.send(content);
 };
 
@@ -145,14 +152,26 @@ MediaUploader.prototype.sendFile = function() {
  * 
  * @private
  */ 
-MediaUploader.prototype.resume = function() {
+MediaUploader.prototype.resume_ = function() {
   var xhr = new XMLHttpRequest();
   xhr.open('PUT', this.url, true);
   xhr.setRequestHeader('Content-Range', "bytes */" + this.file.size);
   xhr.setRequestHeader('X-Upload-Content-Type', this.file.type);
-  xhr.onload = this.onResumableUploadSuccess.bind(this);
-  xhr.onerror = this.onResumableUploadError.bind(this);
+  xhr.onload = this.onContentUploadSuccess_.bind(this);
+  xhr.onerror = this.onContentUploadError_.bind(this);
   xhr.send();
+};
+
+/**
+ * Extract the last saved range if available in the request.
+ *
+ * @param {XMLHttpRequest} xhr Request object
+ */
+MediaUploader.prototype.extractRange_ = function(xhr) {
+ var range = xhr.getResponseHeader('Range');
+ if (range) {
+   this.offset = parseInt(range.match(/\d+/g).pop(), 10) + 1;
+ }
 };
 
 /**
@@ -163,16 +182,13 @@ MediaUploader.prototype.resume = function() {
  * @private
  * @param {object} e XHR event
  */
-MediaUploader.prototype.onResumableUploadSuccess = function(e) {
-  var response = e.target;
+MediaUploader.prototype.onContentUploadSuccess_ = function(e) {
   if (e.target.status == 200 || e.target.status == 201) {
     this.onComplete(e.target.response);
   } else if (e.target.status == 308) {
-    var range = e.target.getResponseHeader('Range');
-    if (range) {
-      this.offset = parseInt(range.match(/\d+/g).pop()) + 1
-    }
-    this.sendFile();
+    this.extractRange_(e.target);
+    this.retryHandler.reset();
+    this.sendFile_();
   }
 };
 
@@ -183,32 +199,23 @@ MediaUploader.prototype.onResumableUploadSuccess = function(e) {
  * @private
  * @param {object} e XHR event
  */
-MediaUploader.prototype.onResumableUploadError = function(e) {
-  if (e.target.status == 401 || e.target.status == 404) {
+MediaUploader.prototype.onContentUploadError_ = function(e) {
+  if (e.target.status && e.target.status < 500) {
     this.onError(e.target.response);
   } else {
-    this.retryHandler.retry(this.resume.bind(this));
+    this.retryHandler.retry(this.resume_.bind(this));
   }
 };
 
-/**
- * Upload complete, invoke callback.
- *
- * @private
- * @param {object} e XHR event
- */
-MediaUploader.prototype.onUploadSuccess = function(e) {
-  this.onComplete(e.target.response);
-};
 
 /**
- * Upload failed, invoke callback.
+ * Handles errors for the initial request.
  *
  * @private
  * @param {object} e XHR event
  */
-MediaUploader.prototype.onUploadError = function(e) {
-  thiss.onError(e.target.response);
+MediaUploader.prototype.onUploadError_ = function(e) {
+  this.onError(e.target.response); // TODO - Retries for initial upload
 };
 
 /**
@@ -218,9 +225,9 @@ MediaUploader.prototype.onUploadError = function(e) {
 * @param {object} [params] Key/value pairs for query string
 * @return {string} query string
 */
-MediaUploader.prototype.buildQuery = function(params) {
+MediaUploader.prototype.buildQuery_ = function(params) {
   params = params || {};
-  return Object.getOwnPropertyNames(params).map(function(key) {
+  return Object.keys(params).map(function(key) {
     return encodeURIComponent(key) + '=' + encodeURIComponent(params[key]);
   }).join('&');
 };
@@ -233,11 +240,13 @@ MediaUploader.prototype.buildQuery = function(params) {
 * @param {object} [params] Query parameters
 * @return {string} URL
 */
-MediaUploader.prototype.buildUrl = function(id, params) {
-  var url = 'https://www.googleapis.com/upload/drive/v2/files/{id}';
-  url = url.replace(/\{id\}/, id ? id : '');
-  var query = this.buildQuery(params);
-  if (query && query.length > 0) {
+MediaUploader.prototype.buildUrl_ = function(id, params) {
+  var url = 'https://www.googleapis.com/upload/drive/v2/files/';
+  if (id) {
+    url += id;
+  }
+  var query = this.buildQuery_(params);
+  if (query) {
     url += '?' + query;
   }
   return url;
