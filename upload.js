@@ -72,6 +72,7 @@ RetryHandler.prototype.getRandomInt_ = function(min, max) {
  * @param {string} [options.contentType] Content-type, if overriding the type of the blob.
  * @param {object} [options.metadata] File metadata
  * @param {function} [options.onComplete] Callback for when upload is complete
+ * @param {function} [options.onProgress] Callback for status for the in-progress upload
  * @param {function} [options.onError] Callback if upload fails
  */
 var MediaUploader = function(options) {
