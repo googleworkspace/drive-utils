@@ -1,8 +1,43 @@
 <html>
   <head>
+   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css">
+
     <meta http-equiv="Content-type" content="text/html;charset=UTF-8">
     <style>
-    #drop_zone {
+   
+    /* Sticky footer styles
+    -------------------------------------------------- */
+    html {
+      position: relative;
+      min-height: 100%;
+    }
+    body {
+      /* Margin bottom by footer height */
+      margin-bottom: 60px;
+    }
+    .footer {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      /* Set the fixed height of the footer here */
+      height: 60px;
+      background-color: #f5f5f5;
+    }
+    
+    /* Custom page CSS
+    -------------------------------------------------- */
+    /* Not required for template or sticky footer method. */
+    
+    .container {
+      width: auto;
+      max-width: 680px;
+      padding: 0 15px;
+    }
+    .container .text-muted {
+      margin: 20px 0;
+    }
+
+  #drop_zone {
       border: 2px dashed #bbb;
       -moz-border-radius: 5px;
       -webkit-border-radius: 5px;
@@ -12,38 +47,39 @@
       font: 20pt bold 'Helvetica';
       color: #bbb;
     }
+    
     </style>
   </head>
   <body>
-      <span id="signin">
-        <span
-          class="g-signin"
-          data-callback="signinCallback"
-          data-clientid="692008307570.apps.googleusercontent.com"
-          data-cookiepolicy="single_host_origin"
-          data-scope="https://www.googleapis.com/auth/drive.file">
-        </span>
-      </span>
-
-      <div id="drop_zone" style="display:none;">Drop files here</div>
      
-     <div id="results"/>
+    <div class="container">
+      <div class="page-header">
+        <h1>Vimeo Upload</h1>
+      </div>
+      <p class="lead">Fill in your vimeo access token and drag you video file into the area below to upload to your vimeo account</p>
+      <div>
+        <input type="accessToken" id="accessToken" class="form-control" placeholder="Vimeo access token" required autofocus></input>
+      </div>
+      <br>
+      <div class="progress">
+        <div id="progress" class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="46" aria-valuemin="0" aria-valuemax="100" style="width: 0%">
+         0%
+        </div>
+      </div>
+      <div id="drop_zone">Drop files here</div>
+      <br>
+      <div id="results"></div>
+    </div>
+    
+    <footer class="footer">
+      <div class="container">
+        <p class="text-muted"><a href="http://websemantics.ca">WebSemantics, Inc.</a></p>
+      </div>
+    </footer>
+
      <script src="upload.js"></script>
      <script type="text/javascript">
-     
-       var accessToken = null;
-       
-       /**
-        * Callback for G+ Sign-in. Swaps views if login successful.
-        */
-       function signinCallback(result) {
-           if(result.access_token) {
-               accessToken = result.access_token;
-               document.getElementById('signin').style.display = 'none';
-               document.getElementById('drop_zone').style.display = null;
-           }
-       }
- 
+
        /**
         * Called when files are dropped on to the drop target. For each file,
         * uploads the content to Drive & displays the results when complete.
@@ -51,22 +87,26 @@
        function handleFileSelect(evt) {
          evt.stopPropagation();
          evt.preventDefault();
-
          var files = evt.dataTransfer.files; // FileList object.
+         var accessToken = document.getElementById("accessToken").value;
+         updateProgress(0);
          
-         var output = [];
-         for (var i = 0, f; f = files[i]; i++) {
-             var uploader = new MediaUploader({
-                 file: f,
-                 token: accessToken,
-                 onComplete: function(data) {
-                     var element = document.createElement("pre");
-                     element.appendChild(document.createTextNode(data));
-                     document.getElementById('results').appendChild(element);
-                 }
-             });
-             uploader.upload();
-         }
+         var uploader = new MediaUploader({
+             file: files[0],
+             token: accessToken,
+             onError: function(data) {
+                 console.log('Error');
+             },
+             onProgress: function(data) {
+                updateProgress(data.loaded / data.total);
+             },
+             onComplete: function(videoId) {
+                 var element = document.createElement("pre");
+                 element.appendChild(document.createTextNode("Uploaded video Id : " + videoId));
+                 document.getElementById('results').appendChild(element);
+             }
+         });
+         uploader.upload();
        }
 
        /**
@@ -86,8 +126,30 @@
            dropZone.addEventListener('dragover', handleDragOver, false);
            dropZone.addEventListener('drop', handleFileSelect, false);
        });
+;
+       /**
+        * Updat progress bar.
+        */
+       function updateProgress(progress) {
+          progress = Math.floor(progress * 100);
+          var element = document.getElementById('progress');
+          element.setAttribute('style', 'width:'+progress+'%');
+          element.innerHTML = progress+'%';
+       }
 
+
+      progress
      </script>
-     <script src="https://apis.google.com/js/client:plusone.js"></script>
+
+     <script>
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+        m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+        })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+      
+        ga('create', 'UA-57984417-1', 'auto');
+        ga('send', 'pageview');
+      
+     </script>
   </body>
 </html>
