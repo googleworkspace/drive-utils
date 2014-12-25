@@ -101,9 +101,18 @@
                 updateProgress(data.loaded / data.total);
              },
              onComplete: function(videoId) {
-                 var element = document.createElement("pre");
-                 element.appendChild(document.createTextNode("Uploaded video Id : " + videoId));
-                 document.getElementById('results').appendChild(element);
+               
+                var url = "https://vimeo.com/"+videoId;
+               
+                var a = document.createElement('a');
+                a.appendChild(document.createTextNode(url));
+                a.setAttribute('href',url);
+
+                var element = document.createElement("div");
+                element.setAttribute('class', "alert alert-success");
+                element.appendChild(a);
+                
+                document.getElementById('results').appendChild(element);
              }
          });
          uploader.upload();
