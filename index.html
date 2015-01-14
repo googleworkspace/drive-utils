@@ -59,6 +59,11 @@
       <p class="lead">Fill in your vimeo access token and drag you video file into the area below to upload to your vimeo account.</p>
       <div>
         <input type="accessToken" id="accessToken" class="form-control" placeholder="Vimeo access token" required autofocus></input>
+      <div class="checkbox">
+        <label>
+          <input type="checkbox" id="upgrade_to_1080" name="upgrade_to_1080" value="yes"> Upgrade to 1080 </input>
+        </label>
+      </div>
       </div>
       <br>
       <div class="progress">
@@ -66,7 +71,7 @@
          0%
         </div>
       </div>
-      <div id="drop_zone">Drop file here</div>
+      <div id="drop_zone">Drop files here</div>
       <br>
       <div id="results"></div>
     </div>
@@ -89,13 +94,29 @@
          evt.preventDefault();
          var files = evt.dataTransfer.files; // FileList object.
          var accessToken = document.getElementById("accessToken").value;
+         var upgrade_to_1080 = document.getElementById("upgrade_to_1080").value;
+         
+         // Clear the results div
+         var node = document.getElementById('results');
+         while (node.hasChildNodes()) node.removeChild(node.firstChild);
+
+         // Rest the progress bar
          updateProgress(0);
          
          var uploader = new MediaUploader({
              file: files[0],
              token: accessToken,
+             upgrade_to_1080: upgrade_to_1080,
              onError: function(data) {
-                 console.log('Error');
+               
+                var errorResponse = JSON.parse(data);
+                message = errorResponse.error;
+
+                var element = document.createElement("div");
+                element.setAttribute('class', "alert alert-danger");
+                element.appendChild(document.createTextNode(message));
+                document.getElementById('results').appendChild(element);
+             
              },
              onProgress: function(data) {
                 updateProgress(data.loaded / data.total);
