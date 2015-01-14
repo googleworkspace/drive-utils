@@ -86,6 +86,7 @@ var MediaUploader = function(options) {
     'mimeType': this.contentType
   };
   this.token = options.token;
+  this.upgrade_to_1080 = options.upgrade_to_1080;
   this.onComplete = options.onComplete || noop;
   this.onProgress = options.onProgress || noop;
   this.onError = options.onError || noop;
@@ -110,6 +111,7 @@ var MediaUploader = function(options) {
 MediaUploader.prototype.upload = function() {
   var self = this;
   var xhr = new XMLHttpRequest();
+  var upgrade_to_1080 = (this.upgrade_to_1080 == 'yes') ? true : false;
 
   xhr.open(this.httpMethod, this.url, true);
   xhr.setRequestHeader('Authorization', 'Bearer ' + this.token);
@@ -131,7 +133,8 @@ MediaUploader.prototype.upload = function() {
 
   xhr.onerror = this.onUploadError_.bind(this);
   xhr.send(JSON.stringify({
-    type:'streaming'
+    type:'streaming',
+    upgrade_to_1080: upgrade_to_1080
   }));
 
 };
