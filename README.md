@@ -29,3 +29,7 @@ This code has only been tested for uploading videos and monitoring progress.
 
 Implement Pause / Resume
 
+## Open Source Projects Used
+
+- [cors-upload-sample](https://github.com/googledrive/cors-upload-sample)
+
