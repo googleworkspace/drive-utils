@@ -368,7 +368,7 @@ MediaUploader.prototype.buildQuery_ = function(params) {
  * @return {string} URL
  */
 MediaUploader.prototype.buildUrl_ = function(id, params, baseUrl) {
-  var url = baseUrl || 'https://api.vimeo.com/me/videos';
+  var url = baseUrl || 'https://api.vimeo.com/me/videos/';
   if (id) {
     url += id;
   }
