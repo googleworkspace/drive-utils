@@ -4,7 +4,7 @@
 
     <meta http-equiv="Content-type" content="text/html;charset=UTF-8">
     <style>
-   
+
     /* Sticky footer styles
     -------------------------------------------------- */
     html {
@@ -23,11 +23,11 @@
       height: 60px;
       background-color: #f5f5f5;
     }
-    
+
     /* Custom page CSS
     -------------------------------------------------- */
     /* Not required for template or sticky footer method. */
-    
+
     .container {
       width: auto;
       max-width: 680px;
@@ -47,14 +47,14 @@
       font: 20pt bold 'Helvetica';
       color: #bbb;
     }
-    
+
     </style>
 
   <script async defer id="github-bjs" src="https://buttons.github.io/buttons.js"></script>
 
   </head>
   <body>
-     
+
     <div class="container">
       <div class="page-header">
         <h1><img src="img/icon.png" style="width:50px"></img>&nbsp;Vimeo Upload</h1>
@@ -71,7 +71,7 @@
         <input type="accessToken" id="accessToken" class="form-control" placeholder="Vimeo access token" required autofocus></input>
       <div class="checkbox">
         <label>
-          <input type="checkbox" id="upgrade_to_1080" name="upgrade_to_1080" value="yes"> Upgrade to 1080 </input>
+          <input type="checkbox" id="upgrade_to_1080" name="upgrade_to_1080"> Upgrade to 1080 </input>
         </label>
       </div>
       </div>
@@ -85,7 +85,7 @@
       <br>
       <div id="results"></div>
     </div>
-    
+
     <footer class="footer">
       <div class="container">
         <p class="text-muted"><a href="http://websemantics.ca">WebSemantics, Inc.</a></p>
@@ -104,21 +104,21 @@
          evt.preventDefault();
          var files = evt.dataTransfer.files; // FileList object.
          var accessToken = document.getElementById("accessToken").value;
-         var upgrade_to_1080 = document.getElementById("upgrade_to_1080").value;
-         
+         var upgrade_to_1080 = document.getElementById("upgrade_to_1080").checked;
+
          // Clear the results div
          var node = document.getElementById('results');
          while (node.hasChildNodes()) node.removeChild(node.firstChild);
 
          // Rest the progress bar
          updateProgress(0);
-         
+
          var uploader = new MediaUploader({
              file: files[0],
              token: accessToken,
              upgrade_to_1080: upgrade_to_1080,
              onError: function(data) {
-               
+
                 var errorResponse = JSON.parse(data);
                 message = errorResponse.error;
 
@@ -126,15 +126,15 @@
                 element.setAttribute('class', "alert alert-danger");
                 element.appendChild(document.createTextNode(message));
                 document.getElementById('results').appendChild(element);
-             
+
              },
              onProgress: function(data) {
                 updateProgress(data.loaded / data.total);
              },
              onComplete: function(videoId) {
-               
+
                 var url = "https://vimeo.com/"+videoId;
-               
+
                 var a = document.createElement('a');
                 a.appendChild(document.createTextNode(url));
                 a.setAttribute('href',url);
@@ -142,7 +142,7 @@
                 var element = document.createElement("div");
                 element.setAttribute('class', "alert alert-success");
                 element.appendChild(a);
-                
+
                 document.getElementById('results').appendChild(element);
              }
          });
@@ -155,7 +155,7 @@
        function handleDragOver(evt) {
          evt.stopPropagation();
          evt.preventDefault();
-         evt.dataTransfer.dropEffect = 'copy'; 
+         evt.dataTransfer.dropEffect = 'copy';
        }
 
        /**
@@ -186,10 +186,10 @@
         (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
         m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
         })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
-      
+
         ga('create', 'UA-57984417-1', 'auto');
         ga('send', 'pageview');
-      
+
      </script>
   </body>
 </html>
