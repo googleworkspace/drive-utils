@@ -8,7 +8,7 @@
  */
 var RetryHandler = function() {
   this.interval = 1000; // Start at one second
-  this.maxInterval = 60 * 1000; // Don't wait longer than a minute
+  this.maxInterval = 60 * 1000; // Don't wait longer than a minute 
 };
 
 /**
@@ -79,15 +79,15 @@ RetryHandler.prototype.getRandomInt_ = function(min, max) {
  */
 var MediaUploader = function(options) {
   var noop = function() {};
+  this.isCordovaApp = options.isCordovaApp;
+  this.realUrl = options.realUrl;
   this.file = options.file;
   this.contentType = options.contentType || this.file.type || 'application/octet-stream';
   this.metadata = options.metadata || {
     'title': this.file.name,
     'mimeType': this.contentType
   };
-  this.videoData = options.videoData;
   this.token = options.token;
-  this.upgrade_to_1080 = options.upgrade_to_1080;
   this.onComplete = options.onComplete || noop;
   this.onProgress = options.onProgress || noop;
   this.onError = options.onError || noop;
@@ -110,7 +110,7 @@ var MediaUploader = function(options) {
  * Initiate the upload (Get vimeo ticket number and upload url)
  */
 MediaUploader.prototype.upload = function() {
-  var self = this;
+
   var xhr = new XMLHttpRequest();
 
   xhr.open(this.httpMethod, this.url, true);
@@ -133,20 +133,21 @@ MediaUploader.prototype.upload = function() {
 
   xhr.onerror = this.onUploadError_.bind(this);
   xhr.send(JSON.stringify({
-    type:'streaming',
-    upgrade_to_1080: this.upgrade_to_1080
+    type:'streaming'
   }));
 
 };
 
 /**
  * Send the actual file content.
+ * New @ 16 June 2015
+ * This has been modified to support Cordova FileTransfer plugin
  *
  * @private
  */
 MediaUploader.prototype.sendFile_ = function() {
   var content = this.file;
-  var end = this.file.size;
+  var end     = this.file.size;
 
   if (this.offset || this.chunkSize) {
     // Only bother to slice the file if we're either resuming or uploading in chunks
@@ -156,18 +157,70 @@ MediaUploader.prototype.sendFile_ = function() {
     content = content.slice(this.offset, end);
   }
 
+  if(this.isCordovaApp) {
+      // Read the video file, 
+      var reader = new FileReader();
+      reader.onloadend = function (evt) {
+          this.send_(evt.target.result, end);          
+      }.bind(this);
+      reader.readAsArrayBuffer(this.file);
+
+    } else{
+      this.send_(content, end); 
+    }
+};
+
+
+/**
+ * Send the file
+ * Added @ 16 June 2015, .. 
+ * @private
+ */
+MediaUploader.prototype.send_ = function(content, end) {
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('PUT', this.url, true);
+    xhr.setRequestHeader('Content-Type', this.contentType);
+    // xhr.setRequestHeader('Content-Length', this.file.size);
+    xhr.setRequestHeader('Content-Range', "bytes " + this.offset + "-" + (end - 1) + "/" + this.file.size);
+
+    if (xhr.upload) {
+      xhr.upload.addEventListener('progress', this.onProgress);
+    }
+    xhr.onload = this.onContentUploadSuccess_.bind(this);
+    xhr.onerror = this.onContentUploadError_.bind(this);
+    xhr.send(content);
+
+}
+
+/**
+ * Verify for the state of the file for completion.
+ * Added @ 16 June 2015, .. 
+ * @private
+ */
+MediaUploader.prototype.verify_ = function() {
+
   var xhr = new XMLHttpRequest();
   xhr.open('PUT', this.url, true);
-  xhr.setRequestHeader('Content-Type', this.contentType);
-  // xhr.setRequestHeader('Content-Length', this.file.size);
-  xhr.setRequestHeader('Content-Range', "bytes " + this.offset + "-" + (end - 1) + "/" + this.file.size);
-
-  if (xhr.upload) {
-    xhr.upload.addEventListener('progress', this.onProgress);
+  xhr.setRequestHeader('Content-Length', "0");
+  xhr.setRequestHeader('Content-Range', "bytes */*");
+  
+  xhr.onload = function(e) {
+  if (e.target.status == 200 || e.target.status == 201) {
+    console.log('verify success!!');
+  } else if (e.target.status == 308) {    
+    console.log('status 308');
   }
-  xhr.onload = this.onContentUploadSuccess_.bind(this);
-  xhr.onerror = this.onContentUploadError_.bind(this);
-  xhr.send(content);
+};
+
+  xhr.onerror = function(e) {
+  if (e.target.status && e.target.status < 500) {
+    // console.log(e.target.response);
+  } else {
+    // Do nothing, 
+  }
+};
+  xhr.send();
 };
 
 /**
@@ -201,8 +254,8 @@ MediaUploader.prototype.extractRange_ = function(xhr) {
 };
 
 /**
- * The final step is to call vimeo.videos.upload.complete to queue up
- * the video for transcoding.
+ * The final step is to call vimeo.videos.upload.complete to queue up 
+ * the video for transcoding. 
  *
  * If successful call 'onComplete'
  *
@@ -225,7 +278,6 @@ MediaUploader.prototype.complete_ = function() {
       var video_id = location.split('/').pop();
 
       this.onComplete(video_id);
-      this.onUpdateVideoData_(video_id);
 
     } else {
       this.onCompleteError_(e);
@@ -237,22 +289,6 @@ MediaUploader.prototype.complete_ = function() {
 };
 
 /**
- * Update the Video Data
- *
- * @private
- * @param {string} [id] Video Id
- */
-MediaUploader.prototype.onUpdateVideoData_ = function(video_id) {
-  var url = this.buildUrl_(video_id, [], 'https://api.vimeo.com/videos/');
-  var httpMethod = 'PATCH';
-  var xhr = new XMLHttpRequest();
-
-  xhr.open(httpMethod, url, true);
-  xhr.setRequestHeader('Authorization', 'Bearer ' + this.token);
-  xhr.send(this.buildQuery_(this.videoData));
-}
-
-/**
  * Handle successful responses for uploads. Depending on the context,
  * may continue with uploading the next chunk of the file or, if complete,
  * invokes vimeo complete service.
@@ -261,17 +297,15 @@ MediaUploader.prototype.onUpdateVideoData_ = function(video_id) {
  * @param {object} e XHR event
  */
 MediaUploader.prototype.onContentUploadSuccess_ = function(e) {
-
+  
   if (e.target.status == 200 || e.target.status == 201) {
-
+   
     this.complete_();
 
   } else if (e.target.status == 308) {
     this.extractRange_(e.target);
     this.retryHandler.reset();
     this.sendFile_();
-  } else {
-    this.onContentUploadError_(e);
   }
 
 };
@@ -334,7 +368,7 @@ MediaUploader.prototype.buildQuery_ = function(params) {
  * @return {string} URL
  */
 MediaUploader.prototype.buildUrl_ = function(id, params, baseUrl) {
-  var url = baseUrl || 'https://api.vimeo.com/me/videos';
+  var url = baseUrl || 'https://api.vimeo.com/me/videos/';
   if (id) {
     url += id;
   }
@@ -344,3 +378,5 @@ MediaUploader.prototype.buildUrl_ = function(id, params, baseUrl) {
   }
   return url;
 };
+
+
