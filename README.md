@@ -1,24 +1,13 @@
-# cors-upload-sample
+# Drive Utils
 
-Sample code for uploading files directly with vanilla Javascript (XHR/CORS). Try the [live version](http://googledrive.github.io/cors-upload-sample)
-and drag & drop files to upload them to Google Drive.
+## [Deduper](deduper/)
 
-This sample has only been tested with Chrome. Other browsers may or may not work.
+Finds duplicate files in Drive based on md5 checksum and offers to trash them.
 
-## Usage
+## [Photo Date Fixer](photo-date-fixer/)
 
-If you'd like to use the code in your own project, copy `upload.js` and include it.
+Sets modified dates on images to those in the EXIF data.
 
-    <script src="/path/to/upload.js"></script>
-    
-When uploading a file, create a new MediaUploader initialized with a Blob or File and access token. Then call `upload()` to start the upload process.
+## [Upload](upload/)
 
-    var uploader = new MediaUploader({
-      file: content,
-      token: accessToken,
-    });
-    uploader.upload();
-
-Your access token need to be authorized for any of the Drive scopes that permit writes (drive, drive.file, or drive.appdata.) You can go through [one of the OAuth 2.0 flows](https://developers.google.com/accounts/docs/OAuth2) to retrieve one or use [Google+ Sign-In](https://developers.google.com/+/web/signin/) button.
-
-See `upload.js` for additional parameters you can include when initializing the uploader, including callbacks for success & failure events.
+Sample code for uploading files directly with vanilla Javascript.
