@@ -97,7 +97,7 @@ var MediaUploader = function(options) {
     params.uploadType = 'resumable';
     this.url = this.buildUrl_(options.fileId, params, options.baseUrl);
   }
-  this.httpMethod = options.fileId ? 'PUT' : 'POST';
+  this.httpMethod = options.fileId ? 'PATCH' : 'POST';
 };
 
 /**
