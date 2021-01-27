@@ -1,7 +1,7 @@
 # Upload Sample
 
 Sample code for uploading files directly with vanilla Javascript (XHR/CORS). Try
-the [live version](http://gsuitedevs.github.io/drive-utils) and drag & drop
+the [live version](http://googleworkspace.github.io/drive-utils) and drag & drop
 files to upload them to Google Drive.
 
 ## Usage
